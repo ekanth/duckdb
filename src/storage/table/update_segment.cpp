@@ -506,7 +506,6 @@ void UpdateSegment::RollbackUpdate(UpdateInfo &info) {
 	// obtain an exclusive lock
 	auto lock_handle = lock.GetExclusiveLock();
 
-	//std::cout << " In US::RollbackUpdate info: " << info.ToString() << std::endl;
 	// move the data from the UpdateInfo back into the base info
 	D_ASSERT(root->info[info.real_vector_index]);
 	rollback_update_function(*root->info[info.real_vector_index]->info, info);

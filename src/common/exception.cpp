@@ -3,7 +3,6 @@
 #include "duckdb/common/to_string.hpp"
 #include "duckdb/common/types.hpp"
 
-#define DUCKDB_DEBUG_STACKTRACE
 #ifdef DUCKDB_CRASH_ON_ASSERT
 #include "duckdb/common/printer.hpp"
 #include <stdio.h>
