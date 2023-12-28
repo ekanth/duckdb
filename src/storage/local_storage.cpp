@@ -74,7 +74,7 @@ LocalTableStorage::~LocalTableStorage() {
 
 void LocalTableStorage::InitializeScan(CollectionScanState &state, optional_ptr<TableFilterSet> table_filters) {
 	if (row_groups->GetTotalRows() == 0) {
-		throw InternalException("No rows in LocalTableStorage row group for scan");
+		return;
 	}
 	row_groups->InitializeScan(state, state.GetColumnIds(), table_filters.get());
 }

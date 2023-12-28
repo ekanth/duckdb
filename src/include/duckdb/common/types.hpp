@@ -413,6 +413,7 @@ struct StringType {
 
 struct ListType {
 	DUCKDB_API static const LogicalType &GetChildType(const LogicalType &type);
+	DUCKDB_API static const LogicalType GetOffsetLengthType(const LogicalType &type);
 };
 
 struct UserType {

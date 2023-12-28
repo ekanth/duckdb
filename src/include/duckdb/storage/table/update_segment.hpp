@@ -37,7 +37,7 @@ public:
 	void FetchCommitted(idx_t vector_index, Vector &result);
 	void FetchCommittedRange(idx_t start_row, idx_t count, Vector &result);
 	void Update(TransactionData transaction, idx_t column_index, Vector &update, row_t *ids, idx_t count,
-	            Vector &base_data);
+	            Vector &base_data, bool append_for_update = false, const vector<row_t> &real_row_ids = vector<row_t>());
 	void FetchRow(TransactionData transaction, idx_t row_id, Vector &result, idx_t result_idx);
 
 	void RollbackUpdate(UpdateInfo &info);
@@ -91,7 +91,7 @@ private:
 
 private:
 	void InitializeUpdateInfo(UpdateInfo &info, row_t *ids, const SelectionVector &sel, idx_t count, idx_t vector_index,
-	                          idx_t vector_offset);
+	                          idx_t vector_offset, bool append_for_update, const vector<row_t> &real_row_ids);
 };
 
 struct UpdateNodeData {

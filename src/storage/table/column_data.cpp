@@ -195,8 +195,6 @@ idx_t ColumnData::ScanCount(ColumnScanState &state, Vector &result, idx_t count)
 	if (count == 0) {
 		return 0;
 	}
-	// ScanCount can only be used if there are no updates
-	D_ASSERT(!updates);
 	return ScanVector(state, result, count, false);
 }
 
@@ -374,6 +372,42 @@ void ColumnData::Update(TransactionData transaction, idx_t column_index, Vector 
 	updates->Update(transaction, column_index, update_vector, row_ids, update_count, base_vector);
 }
 
+void ColumnData::AppendForUpdate(TransactionData transaction, idx_t column_index, const vector<row_t> real_row_ids,
+								 BaseStatistics &stats, ColumnAppendState &state, Vector &vector, idx_t count) {
+	auto start_offset = start + GetMaxEntry();
+	UnifiedVectorFormat vdata;
+	vector.ToUnifiedFormat(count, vdata);
+	ColumnData::AppendData(stats, state, vdata, count);
+	row_t* row_ids = new row_t[count];
+
+	for (idx_t i = 0; i < count; i++) {
+		row_ids[i] = start_offset + i;
+	}
+
+	lock_guard<mutex> update_guard(update_lock);
+	if (!updates) {
+		updates = make_uniq<UpdateSegment>(*this);
+	}
+	Vector base_vector(type);
+	ColumnScanState scan_state;
+	auto fetch_count = Fetch(scan_state, start_offset, base_vector);
+
+	base_vector.Flatten(fetch_count);
+	updates->Update(transaction, column_index, vector, row_ids, count, base_vector, true, real_row_ids);
+}
+
+void ColumnData::AppendColumnForUpdate(TransactionData transaction, BaseStatistics &stats,
+									   const vector<column_t> &column_path, Vector &vector,
+									   row_t *row_ids, idx_t count, idx_t depth) {
+	// this method should only be called at the end of the path in the base column case
+	D_ASSERT(depth >= column_path.size());
+    ColumnAppendState state;
+	ColumnData::InitializeAppend(state);
+	UnifiedVectorFormat vdata;
+	vector.ToUnifiedFormat(count, vdata);
+	ColumnData::AppendData(stats, state, vdata, count);
+}
+
 void ColumnData::UpdateColumn(TransactionData transaction, const vector<column_t> &column_path, Vector &update_vector,
                               row_t *row_ids, idx_t update_count, idx_t depth) {
 	// this method should only be called at the end of the path in the base column case
@@ -545,8 +579,10 @@ void ColumnData::Verify(RowGroup &parent) {
 #ifdef DEBUG
 	D_ASSERT(this->start == parent.start);
 	data.Verify();
-	if (type.InternalType() == PhysicalType::STRUCT || type.InternalType() == PhysicalType::ARRAY) {
-		// structs and fixed size lists don't have segments
+	if (type.InternalType() == PhysicalType::STRUCT ||
+		type.InternalType() == PhysicalType::LIST ||
+		type.InternalType() == PhysicalType::ARRAY) {
+		// structs, lists and arrays don't have segments
 		D_ASSERT(!data.GetRootSegment());
 		return;
 	}

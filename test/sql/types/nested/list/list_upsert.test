@@ -1,0 +1,125 @@
+# name: test/sql/types/nested/list/list_upsert.test
+# description: Test UPSERTS for lists
+# group: [list]
+
+statement ok
+PRAGMA enable_verification
+
+statement ok
+CREATE TABLE t1 (i INT PRIMARY KEY, j INT[]);
+
+statement ok
+INSERT INTO t1 VALUES (2, [2]);
+
+# Basic LIST upsert
+statement ok
+INSERT INTO t1 VALUES (2, [2, NULL, 3]) ON CONFLICT DO UPDATE SET j = excluded.j;
+
+query I
+SELECT j FROM t1
+----
+[2, NULL, 3]
+
+# Upsert with empty list
+statement ok
+INSERT INTO t1 VALUES (2, []) ON CONFLICT DO UPDATE SET j = excluded.j;
+
+query I
+SELECT j FROM t1
+----
+[]
+
+# Upsert with NULL
+statement ok
+INSERT INTO t1 VALUES (2, NULL) ON CONFLICT DO UPDATE SET j = excluded.j;
+
+query I
+SELECT j FROM t1
+----
+NULL
+
+# Upserts within transaction
+statement ok
+INSERT INTO t1 VALUES (3, [3, 4]);
+
+statement ok
+BEGIN TRANSACTION;
+
+# Validate new value is reflected within transaction
+statement ok
+INSERT INTO t1 VALUES (3, [1, 2, 3]) ON CONFLICT DO UPDATE SET j = excluded.j;
+
+query I
+SELECT j from t1 WHERE i = 3;
+----
+[1, 2, 3]
+
+# Conflicting updates within a transaction take effect within transaction
+statement ok
+INSERT INTO t1 VALUES (3, [3, 4, 5, 6]) ON CONFLICT DO UPDATE SET j = excluded.j;
+
+query I
+SELECT j from t1 WHERE i = 3;
+----
+[3, 4, 5, 6]
+
+# Rollback is clean
+statement ok
+ROLLBACK;
+
+query I
+SELECT j from t1 WHERE i = 3;
+----
+[3, 4]
+
+statement ok
+BEGIN TRANSACTION;
+
+statement ok
+INSERT INTO t1 VALUES (3, [3, 5, 7]) ON CONFLICT DO UPDATE SET j = excluded.j;
+
+statement ok
+INSERT INTO t1 VALUES (3, [3, 6, 9, 12]) ON CONFLICT DO UPDATE SET j = excluded.j;
+
+statement ok
+COMMIT;
+
+# Committed transaction is reflected
+query I
+SELECT j from t1 WHERE i = 3;
+----
+[3, 6, 9, 12]
+
+# Upserts on LIST of LIST
+statement ok
+CREATE TABLE t2 (i INT PRIMARY KEY, j INT[][]);
+
+statement ok
+INSERT INTO t2 VALUES (2, [[2],[2]]);
+
+statement ok
+INSERT INTO t2 VALUES (2, [[2], [], [3], [], [4]]) ON CONFLICT DO UPDATE SET j = excluded.j;
+
+query I
+SELECT j from t2
+----
+[[2], [], [3], [], [4]]
+
+# Upserts on more nested LIST (LIST of STRUCT of STRUCT of LIST)
+statement ok
+CREATE TABLE t3 (i INT PRIMARY KEY, j STRUCT(s VARCHAR, k STRUCT(x INT, y INT[]))[]);
+
+statement ok
+INSERT INTO t3 VALUES (2, [('two', (2, [2, 3, 4]))]);
+
+statement ok
+INSERT INTO t3 VALUES (3, [('two', (2, [2, 3, 4])), ('three', (3, [3, 4, 5, 6]))]);
+
+statement ok
+INSERT INTO t3 VALUES (3, [('three', (3, [3, 4, 5])), ('four', (4, [4, 5, NULL, 6, 7, 8]))]) ON CONFLICT DO UPDATE SET j = excluded.j;
+
+query I
+SELECT j FROM t3
+----
+[{'s': two, 'k': {'x': 2, 'y': [2, 3, 4]}}]
+[{'s': three, 'k': {'x': 3, 'y': [3, 4, 5]}}, {'s': four, 'k': {'x': 4, 'y': [4, 5, NULL, 6, 7, 8]}}]

@@ -581,8 +581,8 @@ void RowGroupCollection::RemoveFromIndexes(TableIndexList &indexes, Vector &row_
 }
 
 void RowGroupCollection::UpdateColumn(TransactionData transaction, Vector &row_ids, const vector<column_t> &column_path,
-                                      DataChunk &updates) {
-	auto first_id = FlatVector::GetValue<row_t>(row_ids, 0);
+                                      DataChunk &updates, bool append_for_update, row_t real_row_id) {
+	auto first_id = append_for_update ? real_row_id : FlatVector::GetValue<row_t>(row_ids, 0);
 	if (first_id >= MAX_ROW_ID) {
 		throw NotImplementedException("Cannot update a column-path on transaction local data");
 	}

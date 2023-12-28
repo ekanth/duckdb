@@ -141,6 +141,7 @@ protected:
 	void ReplayInsert();
 	void ReplayDelete();
 	void ReplayUpdate();
+	void ReplayAppendForUpdate();
 	void ReplayCheckpoint();
 
 private:
@@ -308,6 +309,9 @@ void WriteAheadLogDeserializer::ReplayEntry(WALType entry_type) {
 		break;
 	case WALType::UPDATE_TUPLE:
 		ReplayUpdate();
+		break;
+	case WALType::APPEND_FOR_UPDATE_TUPLE:
+		ReplayAppendForUpdate();
 		break;
 	case WALType::CHECKPOINT:
 		ReplayCheckpoint();
@@ -692,6 +696,32 @@ void WriteAheadLogDeserializer::ReplayUpdate() {
 
 	// now perform the update
 	state.current_table->GetStorage().UpdateColumn(*state.current_table, context, row_ids, column_path, chunk);
+}
+
+void WriteAheadLogDeserializer::ReplayAppendForUpdate() {
+	auto column_path = deserializer.ReadProperty<vector<column_t>>(101, "column_indexes");
+
+    row_t real_row_id = deserializer.ReadProperty<row_t>(102, "real_row_id");
+	DataChunk chunk;
+	deserializer.ReadObject(103, "chunk", [&](Deserializer &object) { chunk.Deserialize(object); });
+
+	if (deserialize_only) {
+		return;
+	}
+	if (!state.current_table) {
+		throw InternalException("Corrupt WAL: update without table");
+	}
+
+	if (column_path[0] >= state.current_table->GetColumns().PhysicalColumnCount()) {
+		throw InternalException("Corrupt WAL: column index for update out of bounds");
+	}
+
+	// remove the row id vector from the chunk
+	auto row_ids = std::move(chunk.data.back());
+	chunk.data.pop_back();
+
+	// now perform the update
+	state.current_table->GetStorage().UpdateColumn(*state.current_table, context, row_ids, column_path, chunk, true, real_row_id);
 }
 
 void WriteAheadLogDeserializer::ReplayCheckpoint() {

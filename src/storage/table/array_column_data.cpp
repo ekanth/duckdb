@@ -115,6 +115,36 @@ void ArrayColumnData::Append(BaseStatistics &stats, ColumnAppendState &state, Ve
 	this->count += count;
 }
 
+void ArrayColumnData::AppendForUpdate(TransactionData transaction, idx_t column_index, const vector<row_t> real_row_ids, BaseStatistics &stats, ColumnAppendState &state, Vector &vector, idx_t count) {
+	vector.Flatten(count);
+	// Append validity
+	validity.AppendForUpdate(transaction, column_index, real_row_ids, stats, state.child_appends[0], vector, count);
+	// Append child column
+	auto array_size = ArrayType::GetSize(type);
+	auto &child_vec = ArrayVector::GetEntry(vector);
+	child_column->AppendForUpdate(transaction, column_index, real_row_ids, ArrayStats::GetChildStats(stats), state.child_appends[1], child_vec, count * array_size);
+
+	this->count += count;
+}
+
+// TODO: ekanth: Test this case
+void ArrayColumnData::AppendColumnForUpdate(TransactionData transaction, BaseStatistics &stats, const vector<column_t> &column_path,
+										   Vector &vector, row_t *row_ids, idx_t count, idx_t depth) {
+	// we can never DIRECTLY update a array column
+	if (depth >= column_path.size()) {
+		throw InternalException("Attempting to directly update an array column - this should not be possible");
+	}
+	auto append_column = column_path[depth];
+	if (append_column == 0) {
+		validity.AppendColumnForUpdate(transaction, stats, column_path, vector, row_ids, count, depth + 1);
+	} else {
+		if (append_column > 1) {
+			throw InternalException("AppendColumnForUpdate column_path out of range");
+		}
+		child_column->AppendColumnForUpdate(transaction, stats, column_path, vector, row_ids, count, depth + 1);
+	}
+}
+
 void ArrayColumnData::RevertAppend(row_t start_row) {
 	// Revert validity
 	validity.RevertAppend(start_row);

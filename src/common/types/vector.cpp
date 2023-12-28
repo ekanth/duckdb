@@ -1072,6 +1072,12 @@ void Vector::Serialize(Serializer &serializer, idx_t count) {
 		// constant size type: simple copy
 		idx_t write_size = GetTypeIdSize(logical_type.InternalType()) * count;
 		auto ptr = make_unsafe_uniq_array<data_t>(write_size);
+		//std::cout << " constant sized type..: " << TypeIdToString(logical_type.InternalType())
+		//		  << " element_size: " << GetTypeIdSize(logical_type.InternalType())
+		//		  << " count: " << count
+		//		  << " write_size: " << write_size
+				  //<< " ptr: " << ptr.get()
+		//		  << std::endl;
 		VectorOperations::WriteToStorage(*this, count, ptr.get());
 		serializer.WriteProperty(102, "data", ptr.get(), write_size);
 	} else {

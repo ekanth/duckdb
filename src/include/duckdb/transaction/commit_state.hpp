@@ -34,6 +34,7 @@ public:
 
 	unique_ptr<DataChunk> delete_chunk;
 	unique_ptr<DataChunk> update_chunk;
+	unique_ptr<DataChunk> append_for_update_chunk;
 
 public:
 	template <bool HAS_LOG>

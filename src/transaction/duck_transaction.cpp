@@ -91,7 +91,7 @@ void DuckTransaction::PushAppend(DataTable &table, idx_t start_row, idx_t row_co
 	append_info->count = row_count;
 }
 
-UpdateInfo *DuckTransaction::CreateUpdateInfo(idx_t type_size, idx_t entries) {
+UpdateInfo *DuckTransaction::CreateUpdateInfo(idx_t type_size, idx_t entries, bool append_for_update, const vector<row_t> &real_row_ids) {
 	data_ptr_t base_info = undo_buffer.CreateEntry(
 	    UndoFlags::UPDATE_TUPLE, sizeof(UpdateInfo) + (sizeof(sel_t) + type_size) * STANDARD_VECTOR_SIZE);
 	auto update_info = reinterpret_cast<UpdateInfo *>(base_info);
@@ -99,6 +99,10 @@ UpdateInfo *DuckTransaction::CreateUpdateInfo(idx_t type_size, idx_t entries) {
 	update_info->tuples = reinterpret_cast<sel_t *>(base_info + sizeof(UpdateInfo));
 	update_info->tuple_data = base_info + sizeof(UpdateInfo) + sizeof(sel_t) * update_info->max;
 	update_info->version_number = transaction_id;
+	update_info->append_for_update = append_for_update;
+	if (append_for_update) {
+		update_info->real_row_id = real_row_ids[0];
+	}
 	return update_info;
 }
 

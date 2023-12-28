@@ -2,7 +2,7 @@
 # description: Test WAL backwards compatibility
 # group: [wal]
 
-load data/storage/wal_test_092.db readonly
+load data/storage/wal_test_093.db readonly
 
 query II
 SELECT COUNT(*), SUM(i) FROM integers

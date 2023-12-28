@@ -138,9 +138,10 @@ void ColumnScanState::Initialize(const LogicalType &type) {
 			child_states[i + 1].Initialize(struct_children[i].second);
 		}
 	} else if (type.InternalType() == PhysicalType::LIST) {
-		// validity + list child
-		child_states.resize(2);
+		// validity + offset_length + list child
+		child_states.resize(3);
 		child_states[1].Initialize(ListType::GetChildType(type));
+		child_states[2].Initialize(ListType::GetOffsetLengthType(type));
 	} else if (type.InternalType() == PhysicalType::ARRAY) {
 		// validity + array child
 		child_states.resize(2);

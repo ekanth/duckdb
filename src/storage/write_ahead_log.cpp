@@ -369,6 +369,24 @@ void WriteAheadLog::WriteUpdate(DataChunk &chunk, const vector<column_t> &column
 	serializer.End();
 }
 
+void WriteAheadLog::WriteAppendForUpdate(DataChunk &chunk, const vector<column_t> &column_indexes, const row_t real_row_id) {
+	if (skip_writing) {
+		return;
+	}
+	D_ASSERT(chunk.size() > 0);
+	D_ASSERT(chunk.ColumnCount() == 2);
+	D_ASSERT(chunk.data[1].GetType().id() == LogicalType::ROW_TYPE);
+	chunk.Verify();
+
+	BinarySerializer serializer(*writer);
+	serializer.Begin();
+	serializer.WriteProperty(100, "wal_type", WALType::APPEND_FOR_UPDATE_TUPLE);
+	serializer.WriteProperty(101, "column_indexes", column_indexes);
+	serializer.WriteProperty(102, "real_row_id", real_row_id);
+	serializer.WriteProperty(103, "chunk", chunk);
+	serializer.End();
+}
+
 //===--------------------------------------------------------------------===//
 // Write ALTER Statement
 //===--------------------------------------------------------------------===//

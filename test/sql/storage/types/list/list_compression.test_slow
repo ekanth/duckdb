@@ -74,7 +74,11 @@ SELECT DISTINCT column_path FROM pragma_storage_info('a') ORDER BY ALL
 [1, 0]
 [1, 1, 0]
 [1, 1]
-[1]
+[1, 2, 0]
+[1, 2, 1, 0]
+[1, 2, 1]
+[1, 2, 2, 0]
+[1, 2, 2]
 
 statement ok
 DROP TABLE a

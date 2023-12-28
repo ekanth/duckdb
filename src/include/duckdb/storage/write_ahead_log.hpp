@@ -105,6 +105,7 @@ public:
 	//! -> 1 (second subcolumn of struct)
 	//! -> 0 (first subcolumn of INT)
 	void WriteUpdate(DataChunk &chunk, const vector<column_t> &column_path);
+	void WriteAppendForUpdate(DataChunk &chunk, const vector<column_t> &column_path, const row_t real_row_id);
 
 	//! Truncate the WAL to a previous size, and clear anything currently set in the writer
 	void Truncate(int64_t size);

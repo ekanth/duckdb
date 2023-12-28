@@ -129,6 +129,23 @@ void StandardColumnData::UpdateColumn(TransactionData transaction, const vector<
 	}
 }
 
+void StandardColumnData::AppendForUpdate(TransactionData transaction, idx_t column_index, const vector<row_t> real_row_ids, BaseStatistics &stats,
+						 ColumnAppendState &state, Vector &vector, idx_t count){
+	validity.AppendForUpdate(transaction, column_index, real_row_ids, stats, state.child_appends[0], vector, count);
+	ColumnData::AppendForUpdate(transaction, column_index, real_row_ids, stats, state, vector, count);
+}
+
+void StandardColumnData::AppendColumnForUpdate(TransactionData transaction, BaseStatistics &stats, const vector<column_t> &column_path, Vector &vector,
+											   row_t *row_ids, idx_t count, idx_t depth) {
+	if (depth >= column_path.size()) {
+		// update this column
+		ColumnData::AppendColumnForUpdate(transaction, stats, column_path, vector, row_ids, count, depth);
+	} else {
+		// update the child column (i.e. the validity column)
+		validity.AppendColumnForUpdate(transaction, stats, column_path, vector, row_ids, count, depth + 1);
+	}
+}
+
 unique_ptr<BaseStatistics> StandardColumnData::GetUpdateStatistics() {
 	auto stats = updates ? updates->GetStatistics() : nullptr;
 	auto validity_stats = validity.GetUpdateStatistics();

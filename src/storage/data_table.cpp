@@ -1185,7 +1185,8 @@ void DataTable::Update(TableCatalogEntry &table, ClientContext &context, Vector 
 }
 
 void DataTable::UpdateColumn(TableCatalogEntry &table, ClientContext &context, Vector &row_ids,
-                             const vector<column_t> &column_path, DataChunk &updates) {
+                             const vector<column_t> &column_path, DataChunk &updates,
+							 bool append_for_update, row_t real_row_id) {
 	D_ASSERT(row_ids.GetType().InternalType() == ROW_TYPE);
 	D_ASSERT(updates.ColumnCount() == 1);
 	updates.Verify();
@@ -1202,7 +1203,7 @@ void DataTable::UpdateColumn(TableCatalogEntry &table, ClientContext &context, V
 
 	updates.Flatten();
 	row_ids.Flatten(updates.size());
-	row_groups->UpdateColumn(transaction, row_ids, column_path, updates);
+	row_groups->UpdateColumn(transaction, row_ids, column_path, updates, append_for_update, real_row_id);
 }
 
 //===--------------------------------------------------------------------===//

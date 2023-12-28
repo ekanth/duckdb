@@ -123,7 +123,8 @@ public:
 	//! -> 0 (first subcolumn of INT)
 	//! This method should only be used from the WAL replay. It does not verify update constraints.
 	void UpdateColumn(TableCatalogEntry &table, ClientContext &context, Vector &row_ids,
-	                  const vector<column_t> &column_path, DataChunk &updates);
+	                  const vector<column_t> &column_path, DataChunk &updates,
+					  bool append_for_update = false, row_t real_row_id = 0);
 
 	//! Fetches an append lock
 	void AppendLock(TableAppendState &state);

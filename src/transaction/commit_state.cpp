@@ -220,7 +220,7 @@ void CommitState::WriteUpdate(UpdateInfo &info) {
 	update_chunk->Initialize(Allocator::DefaultAllocator(), update_types);
 
 	// fetch the updated values from the base segment
-	info.segment->FetchCommitted(info.vector_index, update_chunk->data[0]);
+	info.segment->FetchCommitted(info.real_vector_index, update_chunk->data[0]);
 
 	// write the row ids into the chunk
 	auto row_ids = FlatVector::GetData<row_t>(update_chunk->data[1]);
@@ -250,7 +250,11 @@ void CommitState::WriteUpdate(UpdateInfo &info) {
 	column_indexes.push_back(info.column_index);
 	std::reverse(column_indexes.begin(), column_indexes.end());
 
-	log->WriteUpdate(*update_chunk, column_indexes);
+    if (info.append_for_update) {
+		log->WriteAppendForUpdate(*update_chunk, column_indexes, info.real_row_id);
+	} else {
+		log->WriteUpdate(*update_chunk, column_indexes);
+	}
 }
 
 template <bool HAS_LOG>

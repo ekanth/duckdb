@@ -1172,6 +1172,13 @@ const LogicalType &ListType::GetChildType(const LogicalType &type) {
 	return info->Cast<ListTypeInfo>().child_type;
 }
 
+const LogicalType ListType::GetOffsetLengthType(const LogicalType &type) {
+	D_ASSERT(type.id() == LogicalTypeId::LIST || type.id() == LogicalTypeId::MAP);
+	child_list_t<LogicalType> make_struct_children {
+	    {"offset", LogicalType::BIGINT}, {"length", LogicalType::BIGINT}};
+	return LogicalType::STRUCT(make_struct_children);
+}
+
 LogicalType LogicalType::LIST(const LogicalType &child) {
 	auto info = make_shared<ListTypeInfo>(child);
 	return LogicalType(LogicalTypeId::LIST, std::move(info));
