@@ -53,7 +53,9 @@ public:
 	void PushDelete(DataTable &table, RowVersionManager &info, idx_t vector_idx, row_t rows[], idx_t count,
 	                idx_t base_row);
 	void PushAppend(DataTable &table, idx_t row_start, idx_t row_count);
-	UpdateInfo *CreateUpdateInfo(idx_t type_size, idx_t entries, bool append_for_update, const vector<row_t> &real_row_ids);
+	UpdateInfo *CreateUpdateInfo(idx_t type_size, idx_t entries);
+	UpdateInfo *CreateAppendForUpdateInfo(idx_t type_size, idx_t entries, bool append_for_update, const vector<row_t> &real_row_ids);
+	UpdateInfo *ResizeAppendForUpdateInfo(UpdateInfo *old, idx_t type_size, idx_t entries);
 
 	bool IsDuckTransaction() const override {
 		return true;

@@ -185,7 +185,7 @@ void ColumnData::ScanCommittedRange(idx_t row_group_start, idx_t offset_in_row_g
 	ColumnScanState child_state;
 	InitializeScanWithOffset(child_state, row_group_start + offset_in_row_group);
 	auto scan_count = ScanVector(child_state, result, count, updates ? true : false);
-	if (updates) {
+	if (updates && !updates->IsAppendForUpdate()) {
 		result.Flatten(scan_count);
 		updates->FetchCommittedRange(offset_in_row_group, count, result);
 	}
@@ -364,6 +364,8 @@ void ColumnData::Update(TransactionData transaction, idx_t column_index, Vector 
 	if (!updates) {
 		updates = make_uniq<UpdateSegment>(*this);
 	}
+	D_ASSERT(updates->IsAppendForUpdate() == false);
+
 	Vector base_vector(type);
 	ColumnScanState state;
 	auto fetch_count = Fetch(state, row_ids[0], base_vector);
@@ -386,14 +388,14 @@ void ColumnData::AppendForUpdate(TransactionData transaction, idx_t column_index
 
 	lock_guard<mutex> update_guard(update_lock);
 	if (!updates) {
-		updates = make_uniq<UpdateSegment>(*this);
+		updates = make_uniq<UpdateSegment>(*this, true);
 	}
-	Vector base_vector(type);
-	ColumnScanState scan_state;
-	auto fetch_count = Fetch(scan_state, start_offset, base_vector);
+	D_ASSERT(updates->IsAppendForUpdate() == true);
 
-	base_vector.Flatten(fetch_count);
-	updates->Update(transaction, column_index, vector, row_ids, count, base_vector, true, real_row_ids);
+	auto base_vector_size = AlignValue<idx_t, STANDARD_VECTOR_SIZE>(start_offset + count - start);
+	Vector base_vector(type, true, true, base_vector_size);
+
+	updates->AppendForUpdate(transaction, column_index, vector, row_ids, count, base_vector, true, real_row_ids);
 }
 
 void ColumnData::AppendColumnForUpdate(TransactionData transaction, BaseStatistics &stats,
@@ -448,7 +450,7 @@ unique_ptr<ColumnCheckpointState> ColumnData::CreateCheckpointState(RowGroup &ro
 void ColumnData::CheckpointScan(ColumnSegment &segment, ColumnScanState &state, idx_t row_group_start, idx_t count,
                                 Vector &scan_vector) {
 	segment.Scan(state, count, scan_vector, 0, true);
-	if (updates) {
+	if (updates && !updates->IsAppendForUpdate()) {
 		scan_vector.Flatten(count);
 		updates->FetchCommittedRange(state.row_index - row_group_start, count, scan_vector);
 	}

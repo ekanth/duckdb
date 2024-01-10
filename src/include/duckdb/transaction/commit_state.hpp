@@ -47,6 +47,7 @@ private:
 	void WriteCatalogEntry(CatalogEntry &entry, data_ptr_t extra_data);
 	void WriteDelete(DeleteInfo &info);
 	void WriteUpdate(UpdateInfo &info);
+	void WriteAppendForUpdate(UpdateInfo &info);
 };
 
 } // namespace duckdb
